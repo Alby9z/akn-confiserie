@@ -1,0 +1,36 @@
+# Intégration continue — sans Docker : on utilise le PostgreSQL préinstallé sur l'image Ubuntu de GitHub.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verifier:
+    runs-on: ubuntu-24.04
+    env:
+      DATABASE_URL: postgresql://akn:akn_ci_password@localhost:5432/akn_confiserie_test
+      TEST_DATABASE_URL: postgresql://akn:akn_ci_password@localhost:5432/akn_confiserie_test
+      APP_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-only-secret-ci-only-secret-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Démarrer PostgreSQL (préinstallé sur le runner)
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -c "CREATE ROLE akn WITH LOGIN PASSWORD 'akn_ci_password' CREATEDB;"
+          sudo -u postgres createdb -O akn akn_confiserie_test
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Audit des dépendances (vulnérabilités élevées)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

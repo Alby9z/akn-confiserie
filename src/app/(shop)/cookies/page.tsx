@@ -1,0 +1,8 @@
+import type { Metadata } from "next";
+import { LegalPageView } from "@/components/shop/legal-page";
+
+export const metadata: Metadata = { title: "Politique de cookies", alternates: { canonical: "/cookies" } };
+
+export default function Page() {
+  return <LegalPageView slug="COOKIES" />;
+}
